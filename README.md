@@ -18,7 +18,7 @@ No server: runs entirely on **Google Apps Script**.
 | Бюджет «на жизнь» (период 25→24) | Life budget (period 25→24 by default) |
 | Напоминания в 9:00 и 22:00 (МСК) | Reminders at 9:00 and 22:00 (MSK) |
 | Сравнение 6 бюджетных циклов на листе | 6-cycle comparison on the Budget sheet |
-| Среднее по категориям за 6 циклов | Per-category average over 6 cycles |
+| Среднее по категориям (только циклы > 0) | Per-category average (cycles > 0 only) |
 | `/cur` — траты за текущий цикл | `/cur` — spending for the current cycle |
 
 ### Команды / Commands
@@ -159,7 +159,7 @@ The first entry in a new calendar month creates sheet `YYYY-MM`. Budget formulas
 | Зона / Area | Содержание / Content |
 |---|---|
 | **A1:B8** | Параметры (`life_budget`, `period_start_day`, …) / Settings |
-| **A10:B** | Среднее по категориям за 6 циклов / 6-cycle averages |
+| **A10:B** | Среднее по категориям (только циклы с суммой > 0) / Averages (cycles > 0 only) |
 | **C–E** | Пустой зазор / Spacer |
 | **F→** | Матрица 6 циклов (текущий → старше) + «Итого» / 6-cycle matrix + totals |
 
@@ -211,4 +211,4 @@ The token is stored in **Script Properties**, not in the spreadsheet.
 ## Лицензия / License
 
 MIT
-
+

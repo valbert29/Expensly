@@ -1584,7 +1584,7 @@ function refreshBudgetDashboard() {
   sheet.getRange(1, 3, 200, 20).clearContent();
 
   sheet.getRange(avgStartRow, 1).setValue('Категория').setFontWeight('bold');
-  sheet.getRange(avgStartRow, 2).setValue('Среднее (6)').setFontWeight('bold');
+  sheet.getRange(avgStartRow, 2).setValue('Среднее (>0)').setFontWeight('bold');
 
   for (c = 0; c < cycles.length; c++) {
     matrixHeader.push(formatCycleHeader(cycles[c].start, cycles[c].end, settings.timezone));
@@ -1613,7 +1613,7 @@ function refreshBudgetDashboard() {
     matrixValues.push(line);
     avgValues.push([
       categories[i],
-      '=AVERAGE(' + firstValueColLetter + matrixRow + ':' + lastValueColLetter + matrixRow + ')'
+      '=IFERROR(AVERAGEIF(' + firstValueColLetter + matrixRow + ':' + lastValueColLetter + matrixRow + ';">0");0)'
     ]);
   }
 
