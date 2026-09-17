@@ -41,9 +41,9 @@ var TRANSFER_FROM_SAVINGS = 'с сбер';
 
 /** Конструктор на листе «Бюджет»: число циклов и разметка */
 var BUDGET_CYCLE_COUNT = 6;
-var BUDGET_AVG_START_COL = 4;
-var BUDGET_MATRIX_START_ROW = 12;
-var BUDGET_SETTINGS_MAX_ROWS = 20;
+var BUDGET_MATRIX_START_COL = 6;
+var BUDGET_AVG_START_ROW = 10;
+var BUDGET_SETTINGS_CLEAR_ROWS = 7;
 
 /**
  * Обрабатывает одно обновление от Telegram.
@@ -1338,7 +1338,7 @@ function getDefaultBudgetSettings() {
  */
 function writeBudgetSheet(settings) {
   var sheet = getSheet(SHEET_BUDGET);
-  sheet.getRange(2, 1, BUDGET_SETTINGS_MAX_ROWS, 2).clearContent();
+  sheet.getRange(2, 1, BUDGET_SETTINGS_CLEAR_ROWS, 2).clearContent();
   sheet.getRange(2, 1, settings.length, 2).setValues(settings);
 }
 
@@ -1546,7 +1546,7 @@ function formatCycleHeader(start, end, timezone) {
 }
 
 /**
- * Пересобирает конструктор на листе «Бюджет»: среднее справа и матрица 6 циклов ниже.
+ * Пересобирает конструктор на листе «Бюджет»: среднее под параметрами, матрица циклов справа.
  * Запускайте после смены period_start_day.
  */
 function refreshBudgetDashboard() {
@@ -1556,45 +1556,54 @@ function refreshBudgetDashboard() {
   var now = new Date();
   var cycles = [];
   var offset;
-  var avgCol = BUDGET_AVG_START_COL;
-  var matrixRow = BUDGET_MATRIX_START_ROW;
-  var firstDataRow = matrixRow + 1;
+  var matrixCol = BUDGET_MATRIX_START_COL;
+  var avgStartRow = BUDGET_AVG_START_ROW;
+  var avgFirstDataRow = avgStartRow + 1;
+  var matrixHeaderRow = 1;
+  var matrixFirstDataRow = 2;
   var cycleCount = BUDGET_CYCLE_COUNT;
-  var lastCycleCol = 1 + cycleCount;
+  var matrixLastValueCol = matrixCol + cycleCount;
   var i;
   var c;
-  var row;
+  var matrixRow;
+  var avgRow;
   var matrixHeader = ['Категория'];
   var matrixValues = [];
   var avgValues = [];
   var totalFormulas = ['Итого'];
   var totalRow;
+  var firstValueColLetter;
+  var lastValueColLetter;
 
   for (offset = 0; offset > -cycleCount; offset--) {
     cycles.push(getBudgetPeriodByOffset(now, settings.periodStartDay, offset));
   }
 
-  // Очищаем блоки конструктора, параметры A1:B не трогаем.
-  sheet.getRange(1, avgCol, 200, 2).clearContent();
-  sheet.getRange(matrixRow, 1, 200, cycleCount + 1).clearContent();
+  // Очищаем среднее под параметрами и всё справа от B (зазор C–E + матрица + старый мусор).
+  sheet.getRange(avgStartRow, 1, 200, 2).clearContent();
+  sheet.getRange(1, 3, 200, 20).clearContent();
 
-  sheet.getRange(1, avgCol).setValue('Категория').setFontWeight('bold');
-  sheet.getRange(1, avgCol + 1).setValue('Среднее (6)').setFontWeight('bold');
+  sheet.getRange(avgStartRow, 1).setValue('Категория').setFontWeight('bold');
+  sheet.getRange(avgStartRow, 2).setValue('Среднее (6)').setFontWeight('bold');
 
   for (c = 0; c < cycles.length; c++) {
     matrixHeader.push(formatCycleHeader(cycles[c].start, cycles[c].end, settings.timezone));
   }
 
-  sheet.getRange(matrixRow, 1, 1, matrixHeader.length).setValues([matrixHeader]);
-  sheet.getRange(matrixRow, 1, 1, matrixHeader.length).setFontWeight('bold');
+  sheet.getRange(matrixHeaderRow, matrixCol, 1, matrixHeader.length).setValues([matrixHeader]);
+  sheet.getRange(matrixHeaderRow, matrixCol, 1, matrixHeader.length).setFontWeight('bold');
 
   if (categories.length === 0) {
     Logger.log('Конструктор бюджета: нет расходных категорий.');
     return;
   }
 
+  firstValueColLetter = columnIndexToLetter(matrixCol + 1);
+  lastValueColLetter = columnIndexToLetter(matrixLastValueCol);
+
   for (i = 0; i < categories.length; i++) {
-    row = firstDataRow + i;
+    matrixRow = matrixFirstDataRow + i;
+    avgRow = avgFirstDataRow + i;
     var line = [categories[i]];
 
     for (c = 0; c < cycles.length; c++) {
@@ -1604,28 +1613,56 @@ function refreshBudgetDashboard() {
     matrixValues.push(line);
     avgValues.push([
       categories[i],
-      '=AVERAGE(' + columnIndexToLetter(2) + row + ':' + columnIndexToLetter(lastCycleCol) + row + ')'
+      '=AVERAGE(' + firstValueColLetter + matrixRow + ':' + lastValueColLetter + matrixRow + ')'
     ]);
   }
 
-  sheet.getRange(firstDataRow, 1, categories.length, 1 + cycleCount).setValues(matrixValues);
-  sheet.getRange(2, avgCol, categories.length, 2).setValues(avgValues);
+  sheet.getRange(matrixFirstDataRow, matrixCol, categories.length, 1 + cycleCount).setValues(matrixValues);
+  sheet.getRange(avgFirstDataRow, 1, categories.length, 2).setValues(avgValues);
 
-  totalRow = firstDataRow + categories.length;
+  totalRow = matrixFirstDataRow + categories.length;
   for (c = 0; c < cycleCount; c++) {
     totalFormulas.push(
-      '=SUM(' + columnIndexToLetter(2 + c) + firstDataRow + ':' +
-      columnIndexToLetter(2 + c) + (totalRow - 1) + ')'
+      '=SUM(' + columnIndexToLetter(matrixCol + 1 + c) + matrixFirstDataRow + ':' +
+      columnIndexToLetter(matrixCol + 1 + c) + (totalRow - 1) + ')'
     );
   }
 
-  sheet.getRange(totalRow, 1, 1, totalFormulas.length).setValues([totalFormulas]);
-  sheet.getRange(totalRow, 1).setFontWeight('bold');
+  sheet.getRange(totalRow, matrixCol, 1, totalFormulas.length).setValues([totalFormulas]);
+  sheet.getRange(totalRow, matrixCol).setFontWeight('bold');
 
-  sheet.getRange(2, avgCol + 1, categories.length, 1).setNumberFormat('#,##0');
-  sheet.getRange(firstDataRow, 2, categories.length + 1, cycleCount).setNumberFormat('#,##0');
+  sheet.getRange(avgFirstDataRow, 2, categories.length, 1).setNumberFormat('#,##0');
+  sheet.getRange(matrixFirstDataRow, matrixCol + 1, categories.length + 1, cycleCount).setNumberFormat('#,##0');
 
   Logger.log('Конструктор бюджета обновлён: ' + cycleCount + ' циклов, категорий — ' + categories.length);
+}
+
+/**
+ * При изменении period_start_day на листе «Бюджет» пересобирает конструктор.
+ * @param {GoogleAppsScript.Events.SheetsOnEdit} e Событие редактирования.
+ */
+function onEdit(e) {
+  if (!e || !e.range) {
+    return;
+  }
+
+  var sheet = e.range.getSheet();
+
+  if (sheet.getName() !== SHEET_BUDGET) {
+    return;
+  }
+
+  if (e.range.getColumn() !== 2 || e.range.getRow() < 2) {
+    return;
+  }
+
+  var paramName = String(sheet.getRange(e.range.getRow(), 1).getValue());
+
+  if (paramName !== 'period_start_day') {
+    return;
+  }
+
+  refreshBudgetDashboard();
 }
 
 /**
@@ -1872,6 +1909,14 @@ function installReminderTriggers() {
     .inTimezone(timezone)
     .create();
 
+  // Раз в сутки обновляет заголовки циклов (смена периода 25→24 и т.п.).
+  ScriptApp.newTrigger('refreshBudgetDashboard')
+    .timeBased()
+    .everyDays(1)
+    .atHour(0)
+    .inTimezone(timezone)
+    .create();
+
   Logger.log('Триггеры напоминаний: ' + settings.morningSummaryHour + ':00 и ' +
     settings.reminderHour + ':00 (' + timezone + ')');
 }
@@ -1883,7 +1928,9 @@ function removeReminderTriggers() {
   ScriptApp.getProjectTriggers().forEach(function(trigger) {
     var handler = trigger.getHandlerFunction();
 
-    if (handler === 'sendMorningBudgetSummary' || handler === 'sendDailyReminder') {
+    if (handler === 'sendMorningBudgetSummary' ||
+        handler === 'sendDailyReminder' ||
+        handler === 'refreshBudgetDashboard') {
       ScriptApp.deleteTrigger(trigger);
     }
   });
