@@ -1707,6 +1707,19 @@ function buildCycleSummary() {
     expenseByCategory[row.category] = (expenseByCategory[row.category] || 0) + row.amount;
   });
 
+  var excluded = settings.excludedCategories;
+  var lifeByCategory = {};
+  var lifeTotal = 0;
+
+  Object.keys(expenseByCategory).forEach(function(category) {
+    if (excluded.indexOf(category.toLowerCase()) !== -1) {
+      return;
+    }
+
+    lifeByCategory[category] = expenseByCategory[category];
+    lifeTotal += expenseByCategory[category];
+  });
+
   var lines = [
     'Цикл: ' + startText + ' — ' + endText +
       ' (день ' + period.dayInPeriod + ' из ' + period.daysInPeriod + ')',
@@ -1714,18 +1727,18 @@ function buildCycleSummary() {
     'Расходы: −' + formatMoney(expenseTotal)
   ];
 
-  if (Object.keys(expenseByCategory).length === 0) {
+  if (Object.keys(lifeByCategory).length === 0) {
     lines.push('  (пока нет)');
   } else {
-    Object.keys(expenseByCategory).sort(function(a, b) {
-      return expenseByCategory[b] - expenseByCategory[a];
+    Object.keys(lifeByCategory).sort(function(a, b) {
+      return lifeByCategory[b] - lifeByCategory[a];
     }).forEach(function(category) {
-      lines.push('  • ' + category + ': −' + formatMoney(expenseByCategory[category]));
+      lines.push('  • ' + category + ': −' + formatMoney(lifeByCategory[category]));
     });
   }
 
   lines.push('');
-  lines.push('Итого: −' + formatMoney(expenseTotal));
+  lines.push('Итого на жизнь: −' + formatMoney(lifeTotal));
 
   return lines.join('\n');
 }
