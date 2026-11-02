@@ -1,27 +1,32 @@
-# Подробная настройка (если нужен разбор по шагам)
+# Настройка
 
-Обычный путь: см. **[README](../README.md)** → функция `setupExpensly`.
+Пошаговая инструкция — в [README](../README.md) (разделы «Это не общий бот» и «Быстрый старт»).
 
-Ниже — те же шаги по отдельности.
+Кратко:
 
-## По отдельности
+1. Свой бот у [@BotFather](https://t.me/BotFather) → токен в `SETUP.BOT_TOKEN`
+2. Свой Id у [@userinfobot](https://t.me/userinfobot) → в `SETUP.ALLOWED_CHAT_ID`
+3. Своя Google Таблица → **Расширения → Apps Script** → вставить `Code.gs`
+4. Выполнить **`setupExpensly`** и разрешить доступ
+5. В Telegram: `/hel`, затем `100 еда`
 
-1. `saveBotSettings(botToken, allowedChatId)` — токен и chat_id  
-2. `initializeSpreadsheet()` — листы, категории, бюджет, текущий месяц  
-3. `installAllTriggers()` — polling каждую минуту + напоминания 9:00 / 22:00 МСК  
+Это не общий бот автора. Нужны **свой** бот и **своя** таблица.
 
 ## Проблемы
 
 | Симптом | Что сделать |
 |---|---|
-| Бот не отвечает | `installAllTriggers()`, проверить `BOT_TOKEN` |
-| Два ответа на одно сообщение | `installAllTriggers()` |
-| «Доступ запрещён» | Проверить `ALLOWED_CHAT_ID` |
-| Нет напоминаний | Задать `ALLOWED_CHAT_ID`, затем `installAllTriggers()` |
-| Сменил день периода | Меняется само при правке ячейки; или `refreshBudgetDashboard()` |
+| Ошибка про `SETUP.BOT_TOKEN` | Токен из BotFather в начало `Code.gs`, сохранить, снова Выполнить |
+| Ошибка про `SETUP.ALLOWED_CHAT_ID` | Число **Id** из @userinfobot, не username |
+| Бот не отвечает | Подождать минуту; снова `setupExpensly`; токен без пробелов |
+| Два ответа на одно сообщение | Снова `setupExpensly` |
+| «Доступ запрещён» | В `ALLOWED_CHAT_ID` ваш Id |
+| Нет напоминаний | Нужен chat_id, затем `setupExpensly` |
+| Нет нового цикла на листе «Бюджет» | Колонок всегда 6, они сдвигаются. Снова `setupExpensly` |
+| Сменил день периода | Меняется при правке ячейки; иначе `refreshBudgetDashboard` |
 
 ## Безопасность
 
-- Не публикуйте токен бота  
-- Задайте свой `ALLOWED_CHAT_ID`  
-
+- Не публикуйте токен (в том числе в git)
+- Не используйте чужой токен — данные пойдут в чужую таблицу
+- `ALLOWED_CHAT_ID` ограничивает бота только вами

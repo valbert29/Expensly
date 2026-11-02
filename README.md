@@ -47,44 +47,103 @@ No server: runs entirely on **Google Apps Script**.
 
 ---
 
-## Быстрый старт / Quick start
+## Это не общий бот / Not a shared bot
 
-Нужны только: токен бота, Google Таблица, одна функция настройки.  
-You only need: bot token, a Google Sheet, one setup function.
+Репозиторий — **инструкция и код**, чтобы собрать учёт **у себя**. Ботом автора пользоваться нельзя: у каждого свои траты и своя таблица.
 
-### 1. Telegram-бот / Create a bot
+The repo is a **recipe**, not a public bot. You must create **your own** bot and **your own** Google Sheet. Sharing someone else’s token would mix data or block you.
 
-1. Open [@BotFather](https://t.me/BotFather) → `/newbot`
-2. Copy the **token**
+Нужны: аккаунт Google, Telegram, ~15 минут. Код писать не нужно.
 
-Узнать свой `chat_id`: [@userinfobot](https://t.me/userinfobot)  
-Get your `chat_id` from [@userinfobot](https://t.me/userinfobot)
+---
 
-### 2. Google Таблица / Create a spreadsheet
+## Быстрый старт
 
-1. Create a new [Google Sheet](https://sheets.google.com)
-2. **Extensions → Apps Script**
-3. Paste the contents of [`src/Code.gs`](src/Code.gs)
-4. Save (Ctrl+S)
+### 1. Токен бота — `BOT_TOKEN`
 
-Скрипт должен быть открыт **из этой таблицы** (не отдельный standalone-проект).  
-The script must be bound to the spreadsheet (open Apps Script from the sheet).
+1. В Telegram откройте [@BotFather](https://t.me/BotFather) и нажмите **Start**.
+2. Отправьте `/newbot`.
+3. Имя бота — любое, как в списке чатов, например `Мой бюджет`.
+4. Username — латиницей, **обязан** заканчиваться на `bot`, например `mi_expensly_bot`. Если занято — BotFather попросит другое.
+5. В ответ придёт сообщение с **HTTP API token**: строка вида `7123456789:AAHxxxx...`  
+   Это и есть `BOT_TOKEN`. Скопируйте целиком, никому не показывайте.
+6. Запомните **username** бота (`@mi_expensly_bot`) — по нему его найдёте в поиске Telegram.
 
-### 3. Настройка одной функцией / One-shot setup
+Повторно токен: [@BotFather](https://t.me/BotFather) → `/mybots` → ваш бот → **API Token**.
 
-1. In the Apps Script editor, select function **`setupExpensly`**
-2. Run it with parameters:
+### 2. Ваш номер чата — `ALLOWED_CHAT_ID`
+
+Нужен, чтобы бот принимал сообщения **только от вас** и слал утренние/вечерние напоминания.
+
+1. В Telegram откройте [@userinfobot](https://t.me/userinfobot) и нажмите **Start** (или отправьте любое сообщение).
+2. Бот ответит карточкой. Нужно поле **Id** — целое число, например `123456789`.  
+   Не берите username и не берите Id канала/группы.
+3. Это число вставляете в `ALLOWED_CHAT_ID`.
+
+### 3. Таблица и код
+
+1. Откройте [Google Sheets](https://sheets.google.com) под **своим** Google-аккаунтом → **Пустой файл**. Можно назвать «Бюджет».
+2. В таблице: **Расширения → Apps Script**. Откроется редактор — он должен быть связан с **этой** таблицей.
+3. Слева файл `Code.gs`. Сотрите весь текст внутри.
+4. Скопируйте содержимое [`src/Code.gs`](src/Code.gs) из этого репозитория (кнопка raw / «исходный текст») и вставьте в редактор.
+5. В **первых строках** найдите `SETUP` и подставьте свои значения **в кавычки**:
 
 ```
-botToken       = "123456:AAH..."     // from BotFather
-allowedChatId  = "123456789"       // your chat_id (or "" for anyone)
+var SETUP = {
+  BOT_TOKEN: '7123456789:AAHxxxx',
+  ALLOWED_CHAT_ID: '123456789'
+};
 ```
 
-3. Allow Google permissions on first run
-4. Message the bot: `/hel`
+Не оставляйте `YOUR_TELEGRAM_BOT_TOKEN` и `YOUR_CHAT_ID`. Лишние пробелы в кавычках не нужны.
+6. Сохраните: значок дискеты или Ctrl+S (Cmd+S на Mac).
 
-Готово. Бот опрашивает Telegram каждую минуту; напоминания — в 9:00 и 22:00 МСК.  
-Done. The bot polls Telegram every minute; reminders at 9:00 and 22:00 MSK.
+### 4. Запуск
+
+1. Сверху в редакторе — выпадающий список функций. Выберите **`setupExpensly`** (не другую функцию).
+2. Нажмите **Выполнить**.
+3. Первый раз Google запросит права:
+   - выберите свой аккаунт;
+   - «Google не подтвердил приложение» — это нормально для личного скрипта;
+   - **Дополнительные настройки** (Advanced) → **Перейти к … (небезопасно)**;
+   - **Разрешить**.
+4. Внизу редактора не должно быть красной ошибки. Если есть — откройте **Журнал** (Execution log) и сверьте токен и chat_id.
+
+### 5. Проверка в Telegram
+
+1. Поиск Telegram → username вашего бота из шага 1 → **Start**.
+2. Отправьте `/hel` — должна прийти справка (иногда через несколько секунд: бот опрашивает Telegram раз в минуту).
+3. Отправьте `100 еда` — ответ «Записано», в таблице появится лист месяца (`2026-11` и т.п.) и строка расхода.
+
+Дальше: `450 кафе`, `+50000 зп`, `/bud`, `/cur`. Напоминания — около 9:00 и 22:00 по Москве.
+
+### После обновления кода
+
+Снова вставьте новый `Code.gs`, сохраните, **`setupExpensly` → Выполнить**. Если `SETUP` снова с заглушками — подставятся уже сохранённые токен и chat_id.
+
+### Если не вышло
+
+| Что видите | Что сделать |
+|---|---|
+| Ошибка про `SETUP.BOT_TOKEN` | Вставьте токен из BotFather, сохраните, снова Выполнить |
+| Ошибка про `SETUP.ALLOWED_CHAT_ID` | Вставьте **Id** из @userinfobot (только цифры) |
+| Бот молчит | Подождите до минуты; снова `setupExpensly`; токен без пробелов |
+| «Доступ запрещён» | `ALLOWED_CHAT_ID` должен быть **ваш** Id, не username |
+| Нет нового столбца цикла на листе «Бюджет» | Колонок всегда 6, они сдвигаются. Снова `setupExpensly` |
+
+---
+
+## Quick start (EN)
+
+This is **not** a hosted bot. Create **your** bot and **your** spreadsheet (~15 min, no coding).
+
+1. **Token.** Open [@BotFather](https://t.me/BotFather) → `/newbot` → display name → username ending in `bot`. Copy the **HTTP API token** (`123:AAH...`). Keep it private. To see it later: `/mybots` → API Token.
+2. **Chat id.** Open [@userinfobot](https://t.me/userinfobot) → Start. Copy the numeric **Id** (not the username).
+3. **Sheet.** [Google Sheets](https://sheets.google.com) → blank file → **Extensions → Apps Script**. Replace `Code.gs` with [`src/Code.gs`](src/Code.gs). At the top, set `SETUP.BOT_TOKEN` and `SETUP.ALLOWED_CHAT_ID`. Save.
+4. **Run.** Select **`setupExpensly`** → **Run** → allow permissions (Advanced → Go to project).
+5. **Test.** Find your bot by username → `/hel` → `100 еда`. Replies can take up to a minute.
+
+After you paste a newer `Code.gs`, run `setupExpensly` again. If `SETUP` still has placeholders, saved credentials are reused.
 
 ---
 
@@ -118,8 +177,8 @@ Done. The bot polls Telegram every minute; reminders at 9:00 and 22:00 MSK.
 **6. Разбор «куда уходят деньги»**  
 На листе **Бюджет**: слева среднее за 6 циклов, справа колонки циклов. Сразу видно, в каком периоде выросли еда, кафе или подписки.
 
-**7. Новый месяц**  
-Первая запись в новом календарном месяце создаёт лист `YYYY-MM`. Формулы на **Бюджет** подхватывают траты сами; в полночь раз в сутки обновляются заголовки циклов (чтобы новый бюджетный период отобразился без ручного запуска).
+**7. Новый месяц и новый цикл**  
+Первая запись в новом календарном месяце создаёт лист `YYYY-MM`. Цифры на **Бюджет** подтягиваются сами. Колонок циклов всегда **6**: при наступлении 25-го (или вашего `period_start_day`) они **сдвигаются** — слева новый цикл, самый старый исчезает. Это делает ночной запуск в 00:00, если вы один раз запускали `setupExpensly`. Если колонка не сдвинулась — снова **Выполнить → `setupExpensly`** или `refreshBudgetDashboard`.
 
 ### EN
 
@@ -149,8 +208,8 @@ Use `/mon` or `/cur` for structure; filter the sheet by comment for the trip tot
 **6. “Where does the money go?”**  
 On **Budget**: averages for 6 cycles on the left, cycle columns on the right — spot spikes in food, cafes, or subscriptions.
 
-**7. New month**  
-The first entry in a new calendar month creates sheet `YYYY-MM`. Budget formulas pick up new spending automatically; cycle headers refresh daily at 00:00 so a new budget period appears without a manual run.
+**7. New month and new cycle**  
+The first entry in a new calendar month creates sheet `YYYY-MM`. Numbers update automatically. There are always **6** cycle columns: on the 25th (or your `period_start_day`) they **shift** — newest on the left, oldest drops off. That happens at 00:00 if you ran `setupExpensly` once. If the column did not shift, run **`setupExpensly`** or `refreshBudgetDashboard` again.
 
 ---
 
@@ -165,12 +224,15 @@ The first entry in a new calendar month creates sheet `YYYY-MM`. Budget formulas
 
 ### Когда обновляется дашборд / When the dashboard updates
 
+Колонок всегда 6, новая **не добавляется**, список сдвигается.  
+Always 6 columns: they shift, a 7th is not added.
+
 | Событие / Event | Поведение / Behavior |
 |---|---|
 | Новая трата на `YYYY-MM` | Цифры в формулах сами / Cell values recalculate |
-| Правка `period_start_day` | Пересборка сразу (`onEdit`) / Rebuild immediately |
-| Каждый день 00:00 (МСК) | Обновление заголовков циклов / Cycle headers refresh |
-| Вручную / Manual | `refreshBudgetDashboard()` |
+| Правка `period_start_day` | Пересборка сразу / Rebuild immediately |
+| Каждый день 00:00 (МСК) | Сдвиг заголовков циклов / Cycle headers shift |
+| Колонка цикла не сдвинулась / Cycle column stuck | Выполнить `setupExpensly` или `refreshBudgetDashboard` |
 
 ---
 
@@ -190,12 +252,17 @@ The token is stored in **Script Properties**, not in the spreadsheet.
 
 ## Полезные функции / Useful functions
 
-| Функция | Когда запускать / When |
+В редакторе Apps Script выберите имя в списке сверху и нажмите **Выполнить**.  
+Pick the function in the dropdown and click **Run**.
+
+| Функция | Когда / When |
 |---|---|
-| `setupExpensly(token, chatId)` | Первая настройка / First setup |
-| `refreshBudgetDashboard()` | Ручная пересборка дашборда / Manual dashboard rebuild |
-| `resetCategories()` | Обновить список категорий / Reset category list |
-| `installAllTriggers()` | Переустановить polling, напоминания и ночной refresh / Reinstall triggers |
+| `setupExpensly` | Первый запуск и после обновления кода / First setup and after updating Code.gs |
+| `refreshBudgetDashboard` | Только сдвинуть колонки циклов на листе «Бюджет» / Only rebuild cycle columns |
+| `resetCategories` | Сбросить список категорий / Reset category list |
+
+Токен после первого `setupExpensly` хранится в свойствах скрипта. Если в `SETUP` снова заглушки — возьмутся сохранённые значения.  
+After the first run, the token is stored in Script Properties. Placeholders in `SETUP` reuse the saved values.
 
 ---
 

@@ -1,7 +1,16 @@
 /**
  * Telegram-бот для учёта доходов и расходов.
  * Записывает операции в Google Таблицу и отвечает сводками.
+ *
+ * Настройка: вставьте токен и chat_id ниже, сохраните файл,
+ * в списке функций выберите setupExpensly и нажмите Выполнить.
  */
+
+/** Вставьте сюда данные от @BotFather и @userinfobot */
+var SETUP = {
+  BOT_TOKEN: 'YOUR_TELEGRAM_BOT_TOKEN',
+  ALLOWED_CHAT_ID: 'YOUR_CHAT_ID'
+};
 
 /** Имена листов таблицы */
 var SHEET_CATEGORIES = 'Категории';
@@ -1631,8 +1640,29 @@ function refreshBudgetDashboard() {
   sheet.getRange(totalRow, matrixCol, 1, totalFormulas.length).setValues([totalFormulas]);
   sheet.getRange(totalRow, matrixCol).setFontWeight('bold');
 
+  var lifeRow = totalRow + 1;
+  var lifeFormulas = ['Итого на жизнь'];
+  var categoryCol = columnIndexToLetter(matrixCol);
+  var lastCategoryRow = totalRow - 1;
+
+  for (c = 0; c < cycleCount; c++) {
+    var valueCol = columnIndexToLetter(matrixCol + 1 + c);
+    var lifeFormula = '=SUM(' + valueCol + matrixFirstDataRow + ':' + valueCol + lastCategoryRow + ')';
+
+    settings.excludedCategories.forEach(function(name) {
+      lifeFormula += '-SUMIF(' + categoryCol + matrixFirstDataRow + ':' + categoryCol + lastCategoryRow +
+        ';"' + String(name).replace(/"/g, '""') + '";' +
+        valueCol + matrixFirstDataRow + ':' + valueCol + lastCategoryRow + ')';
+    });
+
+    lifeFormulas.push(lifeFormula);
+  }
+
+  sheet.getRange(lifeRow, matrixCol, 1, lifeFormulas.length).setValues([lifeFormulas]);
+  sheet.getRange(lifeRow, matrixCol).setFontWeight('bold');
+
   sheet.getRange(avgFirstDataRow, 2, categories.length, 1).setNumberFormat('#,##0');
-  sheet.getRange(matrixFirstDataRow, matrixCol + 1, categories.length + 1, cycleCount).setNumberFormat('#,##0');
+  sheet.getRange(matrixFirstDataRow, matrixCol + 1, categories.length + 2, cycleCount).setNumberFormat('#,##0');
 
   Logger.log('Конструктор бюджета обновлён: ' + cycleCount + ' циклов, категорий — ' + categories.length);
 }
@@ -2180,27 +2210,48 @@ function fillDefaultAccounts() {
 }
 
 /**
- * Полная первичная настройка: токен, таблица, polling и напоминания.
- * Запустите один раз из редактора Apps Script с параметрами.
- * @param {string} botToken Токен от @BotFather.
- * @param {string} allowedChatId Ваш Telegram chat_id (или пустая строка — доступ для всех).
+ * Полная настройка: токен, таблица, polling, напоминания и ночное обновление листа «Бюджет».
+ * Параметры не нужны: возьмутся из SETUP в начале файла или из уже сохранённых свойств.
+ * После обновления Code.gs запустите эту функцию ещё раз.
  */
-function setupExpensly(botToken, allowedChatId) {
-  if (!botToken) {
-    throw new Error('Укажите botToken (токен от @BotFather).');
+function setupExpensly() {
+  var token = readSetupValue(SETUP.BOT_TOKEN, 'YOUR_TELEGRAM_BOT_TOKEN', 'BOT_TOKEN');
+  var chatId = readSetupValue(SETUP.ALLOWED_CHAT_ID, 'YOUR_CHAT_ID', 'ALLOWED_CHAT_ID');
+
+  if (!token) {
+    throw new Error('Вставьте токен бота в SETUP.BOT_TOKEN в начале Code.gs, сохраните файл и снова нажмите Выполнить.');
   }
 
-  saveBotSettings(botToken, allowedChatId || '');
+  if (!chatId) {
+    throw new Error('Вставьте свой chat_id в SETUP.ALLOWED_CHAT_ID в начале Code.gs (напишите @userinfobot в Telegram).');
+  }
+
+  saveBotSettings(token, chatId);
   initializeSpreadsheet();
   installAllTriggers();
   Logger.log('Expensly готов. Напишите боту в Telegram: /hel');
 }
 
 /**
+ * Берёт значение из SETUP или из сохранённых свойств скрипта, если в SETUP ещё заглушка.
+ * @param {string} setupValue Значение из SETUP.
+ * @param {string} placeholder Текст-заглушка.
+ * @param {string} propertyKey Ключ свойства скрипта.
+ */
+function readSetupValue(setupValue, placeholder, propertyKey) {
+  var value = String(setupValue || '').trim();
+
+  if (value && value !== placeholder) {
+    return value;
+  }
+
+  return getScriptProperty(propertyKey) || '';
+}
+
+/**
  * Сохраняет токен бота и chat_id в свойствах скрипта.
- * Запустите один раз и передайте значения в параметрах функции.
  * @param {string} botToken Токен Telegram-бота.
- * @param {string} allowedChatId Разрешённый chat_id (можно пустую строку).
+ * @param {string} allowedChatId Разрешённый chat_id.
  */
 function saveBotSettings(botToken, allowedChatId) {
   setScriptProperty('BOT_TOKEN', botToken);
